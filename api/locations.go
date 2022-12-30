@@ -28,11 +28,13 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 			Type: gql.String,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
 				graphqlRequest := gclient.NewRequest(`
-					{
-						countries {
-							totalCount
+					{countries(first:10) {
+						edges {
+							node {
+								name
+							}
 						}
-					}
+					}}
 				`)
 
 				graphqlRequest.Header.Set("X-RapidAPI-Key", server.config.GeoDBAPIKey)
@@ -43,7 +45,9 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 					log.Fatalf("Error querying GeoDB, error: %v", err)
 				}
 
-				return graphqlResponse, nil
+				rJSON, _ := json.Marshal(graphqlResponse)
+
+				return string(rJSON), nil
 			},
 		},
 	}
