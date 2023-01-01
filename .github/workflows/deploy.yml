@@ -17,6 +17,9 @@ jobs:
         run: |
           echo 'ENVIRONMENT=development
                 SERVER_ADDRESS=0.0.0.0:8080
+                GEODB_ADDRESS=${{ secrets.GEODB_ADDRESS }}
+                GEODB_API_KEY=${{ secrets.GEODB_API_KEY }}
+                GEODB_API_HOST=${{ secrets.GEODB_API_HOST }}
                 GIN_MODE=debug' > app.env
           cat app.env
 
