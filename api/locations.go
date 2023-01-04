@@ -1,13 +1,14 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	gclient "github.com/machinebox/graphql"
 
 	gql "github.com/graphql-go/graphql"
 )
@@ -18,36 +19,114 @@ type graphRequest struct {
 	Variables map[string]interface{} `json:"variables"`
 }
 
+type data struct {
+	ID          int     `json:"id"`
+	WikiDataID  string  `json:"wikiDataId"`
+	Type        string  `json:"type"`
+	City        string  `json:"city"`
+	Name        string  `json:"name"`
+	Country     string  `json:"country"`
+	CountryCode string  `json:"countryCode"`
+	Region      string  `json:"region"`
+	RegionCode  string  `json:"regionCode"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	Population  int     `json:"population"`
+}
+
+type LocationsResponse struct {
+	Data []data `json:"data"`
+}
+
 func (server *Server) GetPopularLocations(ctx *gin.Context) {
 
-	graphqlClient := gclient.NewClient(server.config.GeoDBAddress)
+	var dataType = gql.NewObject(
+		gql.ObjectConfig{
+			Name: "Data",
+			Fields: gql.Fields{
+				"id": &gql.Field{
+					Type: gql.Int,
+				},
+				"wikiDataId": &gql.Field{
+					Type: gql.String,
+				},
+				"Type": &gql.Field{
+					Type: gql.String,
+				},
+				"city": &gql.Field{
+					Type: gql.String,
+				},
+				"name": &gql.Field{
+					Type: gql.String,
+				},
+				"country": &gql.Field{
+					Type: gql.String,
+				},
+				"countryCode": &gql.Field{
+					Type: gql.String,
+				},
+				"region": &gql.Field{
+					Type: gql.String,
+				},
+				"regionCode": &gql.Field{
+					Type: gql.String,
+				},
+				"latitude": &gql.Field{
+					Type: gql.Float,
+				},
+				"longitude": &gql.Field{
+					Type: gql.Float,
+				},
+				"population": &gql.Field{
+					Type: gql.Int,
+				},
+			},
+		},
+	)
+
+	var locationsResponseType = gql.NewObject(
+		gql.ObjectConfig{
+			Name: "LocationsResponse",
+			Fields: gql.Fields{
+				"data": &gql.Field{
+					Type: gql.NewList(dataType),
+				},
+			},
+		},
+	)
 
 	// Schema
 	fields := gql.Fields{
-		"hello": &gql.Field{
-			Type: gql.String,
+		"cities": &gql.Field{
+			Type: locationsResponseType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
-				graphqlRequest := gclient.NewRequest(`
-					{countries(first:10) {
-						edges {
-							node {
-								name
-							}
-						}
-					}}
-				`)
 
-				graphqlRequest.Header.Set("X-RapidAPI-Key", server.config.GeoDBAPIKey)
-				graphqlRequest.Header.Set("X-RapidAPI-Host", server.config.GeoDBAPIHost)
+				offset := rand.Intn(500000)
 
-				var graphqlResponse interface{}
-				if err := graphqlClient.Run(context.Background(), graphqlRequest, &graphqlResponse); err != nil {
-					log.Fatalf("Error querying GeoDB, error: %v", err)
+				url := server.config.GeoDBAddress + "/cities"
+
+				req, _ := http.NewRequest("GET", url, nil)
+
+				req.Header.Add("X-RapidAPI-Key", server.config.GeoDBAPIKey)
+				req.Header.Add("X-RapidAPI-Host", server.config.GeoDBAPIHost)
+
+				params := req.URL.Query()
+				params.Add("offset", fmt.Sprintf("%v", offset))
+				params.Add("limit", fmt.Sprintf("%v", 5))
+				req.URL.RawQuery = params.Encode()
+
+				res, _ := http.DefaultClient.Do(req)
+
+				defer res.Body.Close()
+				body, _ := ioutil.ReadAll(res.Body)
+
+				var r LocationsResponse
+				err := json.Unmarshal(body, &r)
+				if err != nil {
+					log.Panic("Cannot unmarshal LocationResponse")
 				}
 
-				rJSON, _ := json.Marshal(graphqlResponse)
-
-				return string(rJSON), nil
+				return r, nil
 			},
 		},
 	}
