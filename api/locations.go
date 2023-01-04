@@ -35,7 +35,8 @@ type data struct {
 }
 
 type LocationsResponse struct {
-	Data []data `json:"data"`
+	Data  []data `json:"data"`
+	Error string
 }
 
 func (server *Server) GetPopularLocations(ctx *gin.Context) {
@@ -91,6 +92,9 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 				"data": &gql.Field{
 					Type: gql.NewList(dataType),
 				},
+				"error": &gql.Field{
+					Type: gql.String,
+				},
 			},
 		},
 	)
@@ -101,7 +105,7 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 			Type: locationsResponseType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
 
-				offset := rand.Intn(500000)
+				offset := rand.Intn(50000)
 
 				url := server.config.GeoDBAddress + "/cities"
 
@@ -113,9 +117,16 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 				params := req.URL.Query()
 				params.Add("offset", fmt.Sprintf("%v", offset))
 				params.Add("limit", fmt.Sprintf("%v", 5))
+				params.Add("sort", "-population")
 				req.URL.RawQuery = params.Encode()
 
 				res, _ := http.DefaultClient.Do(req)
+
+				if res.StatusCode != 200 {
+					log.Println("Slow down! Too many requests on GeoDB API.")
+					r := LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
+					return r, nil
+				}
 
 				defer res.Body.Close()
 				body, _ := ioutil.ReadAll(res.Body)
