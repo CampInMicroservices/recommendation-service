@@ -105,7 +105,7 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 			Type: locationsResponseType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
 
-				offset := rand.Intn(50000)
+				offset := rand.Intn(100)
 
 				url := server.config.GeoDBAddress + "/cities"
 
@@ -118,6 +118,7 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 				params.Add("offset", fmt.Sprintf("%v", offset))
 				params.Add("limit", fmt.Sprintf("%v", 5))
 				params.Add("sort", "-population")
+				params.Add("countryIds", "AT,CH,DE,FI,FR,GB,IT,NL,PL,SI")
 				req.URL.RawQuery = params.Encode()
 
 				res, _ := http.DefaultClient.Do(req)
