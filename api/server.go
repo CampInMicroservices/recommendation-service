@@ -26,6 +26,7 @@ func NewServer(config config.Config) (*Server, error) {
 	v1 := router.Group("v1")
 	{
 		v1.POST("/locations", server.GetPopularLocations)
+		v1.GET("/weather", server.GetLocationWeather)
 	}
 
 	// Setup health check routes
