@@ -19,6 +19,7 @@ spec:
           image: simenravnik/recommendation-service:latest
           ports:
             - containerPort: 8080
+          imagePullPolicy: Always
 ---
 apiVersion: v1
 kind: Service
