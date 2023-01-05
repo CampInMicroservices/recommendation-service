@@ -4,22 +4,25 @@ import (
 	"recommendation-service/config"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sony/gobreaker"
 )
 
 // Server serves HTTP requests for our banking service
 type Server struct {
-	config config.Config
-	router *gin.Engine
+	config      config.Config
+	locationsCB *gobreaker.CircuitBreaker
+	router      *gin.Engine
 }
 
 // NewServer creates a new HTTP server and set up routing
-func NewServer(config config.Config) (*Server, error) {
+func NewServer(config config.Config, locationsCB *gobreaker.CircuitBreaker) (*Server, error) {
 
 	gin.SetMode(config.GinMode)
 	router := gin.Default()
 
 	server := &Server{
-		config: config,
+		config:      config,
+		locationsCB: locationsCB,
 	}
 
 	// Setup routing for server

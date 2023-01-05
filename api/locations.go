@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -105,37 +106,19 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 			Type: locationsResponseType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
 
-				offset := rand.Intn(100)
+				r, err := server.locationsCB.Execute(func() (interface{}, error) {
+					url := server.config.GeoDBAddress + "/cities"
+					r, err := server.DoReq(url)
 
-				url := server.config.GeoDBAddress + "/cities"
+					return r, err
+				})
 
-				req, _ := http.NewRequest("GET", url, nil)
-
-				req.Header.Add("X-RapidAPI-Key", server.config.GeoDBAPIKey)
-				req.Header.Add("X-RapidAPI-Host", server.config.GeoDBAPIHost)
-
-				params := req.URL.Query()
-				params.Add("offset", fmt.Sprintf("%v", offset))
-				params.Add("limit", fmt.Sprintf("%v", 5))
-				params.Add("sort", "-population")
-				params.Add("countryIds", "AT,CH,DE,FI,FR,GB,IT,NL,PL,SI")
-				req.URL.RawQuery = params.Encode()
-
-				res, _ := http.DefaultClient.Do(req)
-
-				if res.StatusCode != 200 {
-					log.Println("Slow down! Too many requests on GeoDB API.")
-					r := LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
-					return r, nil
+				if err != nil {
+					log.Println(err)
 				}
 
-				defer res.Body.Close()
-				body, _ := ioutil.ReadAll(res.Body)
-
-				var r LocationsResponse
-				err := json.Unmarshal(body, &r)
-				if err != nil {
-					log.Panic("Cannot unmarshal LocationResponse")
+				if r == nil {
+					r = LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
 				}
 
 				return r, nil
@@ -171,4 +154,39 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, r)
+}
+
+func (server *Server) DoReq(url string) (interface{}, error) {
+	offset := rand.Intn(100)
+
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("X-RapidAPI-Key", server.config.GeoDBAPIKey)
+	req.Header.Add("X-RapidAPI-Host", server.config.GeoDBAPIHost)
+
+	params := req.URL.Query()
+	params.Add("offset", fmt.Sprintf("%v", offset))
+	params.Add("limit", fmt.Sprintf("%v", 5))
+	params.Add("sort", "-population")
+	params.Add("countryIds", "AT,CH,DE,FI,FR,GB,IT,NL,PL,SI")
+	req.URL.RawQuery = params.Encode()
+
+	res, _ := http.DefaultClient.Do(req)
+
+	if res.StatusCode != 200 {
+		log.Println("Slow down! Too many requests on GeoDB API.")
+		r := LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
+		return r, errors.New("Slow down! Too many requests on GeoDB API.")
+	}
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	var r LocationsResponse
+	err := json.Unmarshal(body, &r)
+	if err != nil {
+		log.Panic("Cannot unmarshal LocationResponse")
+	}
+
+	return r, nil
 }
