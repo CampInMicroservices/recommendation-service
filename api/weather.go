@@ -3,12 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type getLocationWeather struct {
