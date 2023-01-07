@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	uuid "github.com/satori/go.uuid"
 
 	gql "github.com/graphql-go/graphql"
 )
@@ -36,8 +37,9 @@ type data struct {
 }
 
 type LocationsResponse struct {
-	Data  []data `json:"data"`
-	Error string
+	Data    []data `json:"data"`
+	Error   string
+	TraceID interface{}
 }
 
 func (server *Server) GetPopularLocations(ctx *gin.Context) {
@@ -96,6 +98,9 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 				"error": &gql.Field{
 					Type: gql.String,
 				},
+				"traceId": &gql.Field{
+					Type: gql.String,
+				},
 			},
 		},
 	)
@@ -106,9 +111,12 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 			Type: locationsResponseType,
 			Resolve: func(p gql.ResolveParams) (interface{}, error) {
 
+				traceId := uuid.NewV4()
+				ctx.Set("trace_id", traceId)
+
 				r, err := server.locationsCB.Execute(func() (interface{}, error) {
 					url := server.config.GeoDBAddress + "/cities"
-					r, err := server.DoReq(url)
+					r, err := server.DoReq(url, ctx, traceId)
 
 					return r, err
 				})
@@ -118,7 +126,7 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 				}
 
 				if r == nil {
-					r = LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
+					r = LocationsResponse{Error: "Slow down! Too many requests on GeoDB API.", TraceID: traceId}
 				}
 
 				return r, nil
@@ -156,7 +164,7 @@ func (server *Server) GetPopularLocations(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, r)
 }
 
-func (server *Server) DoReq(url string) (interface{}, error) {
+func (server *Server) DoReq(url string, ctx *gin.Context, traceId interface{}) (interface{}, error) {
 	offset := rand.Intn(100)
 
 	req, _ := http.NewRequest("GET", url, nil)
@@ -175,7 +183,7 @@ func (server *Server) DoReq(url string) (interface{}, error) {
 
 	if res.StatusCode != 200 {
 		log.Println("Slow down! Too many requests on GeoDB API.")
-		r := LocationsResponse{Error: "Slow down! Too many requests on GeoDB API."}
+		r := LocationsResponse{Error: "Slow down! Too many requests on GeoDB API.", TraceID: traceId}
 		return r, errors.New("Slow down! Too many requests on GeoDB API.")
 	}
 
@@ -187,6 +195,7 @@ func (server *Server) DoReq(url string) (interface{}, error) {
 	if err != nil {
 		log.Panic("Cannot unmarshal LocationResponse")
 	}
+	r.TraceID = traceId
 
 	return r, nil
 }

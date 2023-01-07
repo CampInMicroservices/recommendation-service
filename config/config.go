@@ -15,6 +15,7 @@ type Config struct {
 	AerisWeatherAddress string `mapstructure:"AERISWEATHER_API_ADDRESS"`
 	AerisWeatherAPIKey  string `mapstructure:"AERISWEATHER_API_KEY"`
 	AerisWeatherAPIHost string `mapstructure:"AERISWEATHER_API_HOST"`
+	LogitAddress        string `mapstructure:"LOGIT_ADDRESS"`
 	GinMode             string `mapstructure:"GIN_MODE"`
 }
 

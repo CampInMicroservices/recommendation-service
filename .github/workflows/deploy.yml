@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
@@ -23,6 +23,7 @@ jobs:
                 AERISWEATHER_API_ADDRESS=${{ secrets.AERISWEATHER_API_ADDRESS }}
                 AERISWEATHER_API_KEY=${{ secrets.AERISWEATHER_API_KEY }}
                 AERISWEATHER_API_HOST=${{ secrets.AERISWEATHER_API_HOST }}
+                LOGIT_ADDRESS=7da32513-7943-43f7-ac93-7dd1435b92e3-ls.logit.io:23703
                 GIN_MODE=debug' > app.env
           cat app.env
 

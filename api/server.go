@@ -2,6 +2,7 @@ package api
 
 import (
 	"recommendation-service/config"
+	"recommendation-service/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sony/gobreaker"
@@ -19,6 +20,7 @@ func NewServer(config config.Config, locationsCB *gobreaker.CircuitBreaker) (*Se
 
 	gin.SetMode(config.GinMode)
 	router := gin.Default()
+	router.Use(middleware.Logger(config.LogitAddress))
 
 	server := &Server{
 		config:      config,
