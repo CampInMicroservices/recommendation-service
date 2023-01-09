@@ -13,8 +13,9 @@ import (
 )
 
 type getLocationWeather struct {
-	Lat  float64 `form:"lat" binding:"required"`
-	Long float64 `form:"long" binding:"required"`
+	Lat     float64 `form:"lat" binding:"required"`
+	Long    float64 `form:"long" binding:"required"`
+	TraceID string  `form:"trace_id"`
 }
 
 type weatherApiResponse struct {
@@ -119,6 +120,11 @@ type weatherApiResponse struct {
 	} `json:"response"`
 }
 
+type WeatherResponse struct {
+	TraceID interface{}
+	Weather weatherApiResponse
+}
+
 func (server *Server) GetLocationWeather(ctx *gin.Context) {
 
 	// Check if request has lat and long field in URI.
@@ -128,6 +134,9 @@ func (server *Server) GetLocationWeather(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
+
+	// Add TraceID to context
+	ctx.Set("trace_id", req.TraceID)
 
 	url := server.config.AerisWeatherAddress + "/observations/" + fmt.Sprintf("%f", req.Lat) + "," + fmt.Sprintf("%f", req.Long)
 	apiReq, _ := http.NewRequest("GET", url, nil)
@@ -151,5 +160,7 @@ func (server *Server) GetLocationWeather(ctx *gin.Context) {
 		log.Panic("Cannot unmarshal Response")
 	}
 
-	ctx.JSON(http.StatusOK, r)
+	var response = WeatherResponse{Weather: r, TraceID: req.TraceID}
+
+	ctx.JSON(http.StatusOK, response)
 }
